@@ -1,15 +1,13 @@
 from datetime import datetime
-from django.db.models import Count, F, Q
+from django.db.models import Count, F
 from django.utils.decorators import method_decorator
 from drf_yasg.openapi import Parameter, IN_QUERY, TYPE_STRING
 from drf_yasg.utils import swagger_auto_schema
-from functools import reduce
 from rest_framework.decorators import api_view
 from rest_framework.mixins import ListModelMixin, RetrieveModelMixin
 from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK
 from rest_framework.viewsets import GenericViewSet
-from operator import __and__
 
 from .models import Concept, ConditionOccurrence, Death, DrugExposure, Person, VisitOccurrence
 from .serializers import \

@@ -22,8 +22,8 @@ redis:
 test: sanity unit
 
 sanity:
-	$(VENV_BASE)/bin/flake8
-	$(VENV_BASE)/bin/vulture *.py --min-confidence 70
+	$(VENV_BASE)/bin/flake8 api/*.py
+	$(VENV_BASE)/bin/vulture api/*.py --min-confidence 70
 
 unit:
 	$(PYTHON) api/manage.py test -v3
