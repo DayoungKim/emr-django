@@ -1,5 +1,4 @@
-PY_VERSION ?= 3.8.7
-PY_ENV := $(if $($(PYTHON)3 --version | grep $(PY_VERSION)), $(PYTHON)3, $(PYENV_ROOT)/versions/$(PY_VERSION)/bin/python)
+MOTHER_PYTHON ?= python3.8
 VENV_BASE ?= $(PWD)/venv
 PYTHON ?= $(VENV_BASE)/bin/python
 PIP ?= $(VENV_BASE)/bin/pip
@@ -9,13 +8,16 @@ PIP ?= $(VENV_BASE)/bin/pip
 venv:
 	if [ "$(VENV_BASE)" ]; then \
 		if [ ! -d "$(VENV_BASE)" ]; then \
-			virtualenv -p $(PY_ENV) $(VENV_BASE); \
+			virtualenv -p $(MOTHER_PYTHON) $(VENV_BASE); \
 			$(PIP) install -r requirements.txt; \
 		fi; \
 	fi
 
 server:
 	$(PYTHON) api/manage.py runserver 0:8000
+
+redis:
+	docker-compose -f db-compose.yaml up -d
 
 test: sanity unit
 
