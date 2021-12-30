@@ -52,31 +52,37 @@ def visit_view(request):
 
 @method_decorator(name='list', decorator=swagger_auto_schema(
     manual_parameters=[
-        Parameter(name='q', description='키워드 검색, 여러개 조회할 땐 사이에 쉼표 넣을 것', in_=IN_QUERY, type=TYPE_STRING,
-                  required=False),
         Parameter(
-            name='ids', description='concept id 검색. 여러개를 조회할땐 사이에 쉼표 넣을 것',
-            in_=IN_QUERY, type=TYPE_STRING, required=False),
-        Parameter(name='start', description='valid_start_date 검색. yyyy-mm-dd 형식 입력', in_=IN_QUERY, type=TYPE_STRING,
-                  required=False),
-        Parameter(name='end', description='valid_end_date 검색. yyyy-mm-dd 형식 입력', in_=IN_QUERY, type=TYPE_STRING,
-                  required=False),
+            name='f', in_=IN_QUERY, type=TYPE_STRING, required=False,
+            description='키워드 검색, 검색할 컬럼:값 형식 입력. '
+                        '여러개 검색할 땐 사이에 쉼표 넣을 것(=쉼표를 포함하면 검색 안됨...). '
+                        '같은 컬럼의 값은 중복 검색 안됨. 검색값이 키워드를 포함하면 리턴. '
+                        '해당 값이 컨셉일 경우 XX_concept__concept_name:컨셉이름, XX_concept__concept_id:컨셉아이디 로 검색가능')
     ]))
-class ConceptViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
+class SearchGenericViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
+    def get_f(self, value):
+        q_filter = {}
+        for v in value:
+            try:
+                filter_key, filter_value = v.split(':')
+                q_filter[filter_key + '__icontains'] = filter_value
+            except Exception:
+                self.queryset = self.queryset.none()
+        self.queryset = self.queryset.filter(**q_filter)
+
+    def get_queryset(self):
+        for key in self.request.GET.keys():
+            method_name = 'get_%s' % key
+            if hasattr(self, method_name):
+                self_method = getattr(self, method_name)
+                self_method(value=self.request.GET[key].split(','))
+        return self.queryset
+
+
+class ConceptViewSet(SearchGenericViewSet):
     model = Concept
     queryset = Concept.objects.all()
     serializer_class = ConceptSerializer
-
-    def get_q(self, value):
-        self.queryset = self.queryset.filter(reduce(__and__, (
-            Q(concept_name=v) |
-            Q(domain_id=v) |
-            Q(vocabulary_id=v) |
-            Q(concept_class_id=v) |
-            Q(standard_concept=v) |
-            Q(concept_code=v) |
-            Q(invalid_reason=v)
-            for v in value)))
 
     def __date_search(self, value):
         if len(value) < 1 or len(value) > 2:
@@ -102,40 +108,49 @@ class ConceptViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
     def get_ids(self, value):
         self.queryset = self.queryset.filter(concept_id__in=value)
 
-    def get_queryset(self):
-        for key in self.request.GET.keys():
-            method_name = 'get_%s' % key
-            if hasattr(self, method_name):
-                self_method = getattr(self, method_name)
-                self_method(value=self.request.GET[key].split(','))
-        return self.queryset
+    @method_decorator(name='list', decorator=swagger_auto_schema(
+        manual_parameters=[
+            Parameter(name='f', in_=IN_QUERY, type=TYPE_STRING, required=False,
+                      description='키워드 검색, 검색할 컬럼:값 형식 입력(예: domain_id:Drug,concept_name:FILM COATED), '
+                                  '여러개 검색할 땐 사이에 쉼표 넣을 것(=쉼표를 포함하면 검색 안됨...). '
+                                  '같은 컬럼의 값은 중복 검색 안됨. 검색값이 키워드를 포함하면 리턴. '),
+            Parameter(
+                name='ids', description='concept id 검색. 여러개를 검색할땐 사이에 쉼표 넣을 것',
+                in_=IN_QUERY, type=TYPE_STRING, required=False),
+            Parameter(name='start', description='valid_start_date 검색. yyyy-mm-dd 형식 입력', in_=IN_QUERY, type=TYPE_STRING,
+                      required=False),
+            Parameter(name='end', description='valid_end_date 검색. yyyy-mm-dd 형식 입력', in_=IN_QUERY, type=TYPE_STRING,
+                      required=False),
+        ]))
+    def list(self, request, *args, **kwargs):
+        return super(ConceptViewSet, self).list(request, *args, **kwargs)
 
 
-class PersonViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
+class PersonViewSet(SearchGenericViewSet):
     model = Person
     queryset = Person.objects.all()
     serializer_class = PersonSerializer
 
 
-class ConditionOccurrenceViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
+class ConditionOccurrenceViewSet(SearchGenericViewSet):
     model = ConditionOccurrence
     queryset = ConditionOccurrence.objects.all()
     serializer_class = ConditionOccurrenceSerializer
 
 
-class DeathViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
+class DeathViewSet(SearchGenericViewSet):
     model = Death
     queryset = Death.objects.all()
     serializer_class = DeathSerializer
 
 
-class DrugExposureViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
+class DrugExposureViewSet(SearchGenericViewSet):
     model = DrugExposure
     queryset = DrugExposure.objects.all()
     serializer_class = DrugExposureSerializer
 
 
-class VisitOccurrenceViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
+class VisitOccurrenceViewSet(SearchGenericViewSet):
     model = VisitOccurrence
     queryset = VisitOccurrence.objects.all()
     serializer_class = VisitOccurrenceSerializer
