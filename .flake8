@@ -1,0 +1,5 @@
+[flake8]
+ignore = E226,E302,E41,W504
+exclude = .git,__pycache__,venv/*,*/migrations/*,*/management/*,src/*
+max-line-length = 120
+max-complexity = 10
